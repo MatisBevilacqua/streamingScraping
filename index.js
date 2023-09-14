@@ -40,8 +40,6 @@ async function getStreamLink() {
 
     try {
 
-        // console.log(moviesData.length);
-
         for (const movieData in moviesData) {
 
             const getStreamUrl = await axios.get(`${moviesData[movieData].movieLink}`);
