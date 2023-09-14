@@ -1,6 +1,17 @@
 const cheerio = require("cheerio");
 const axios = require("axios");
+const mysql = require("mysql");
 const moviesData = [];
+
+const connection = mysql.createConnection({
+    host: 'localhost:3306',
+    user: 'root',
+    password: '',
+    database: 'streaming_scraping'
+});
+
+connection.connect();
+
 
 const url = "https://imzod.com/9xzk9bkpqsmq1h/home/imzod/";
 
@@ -13,7 +24,7 @@ async function getUrLMovie() {
 
         divAllMovie.each(function () {
             movieName = $(this).find("p").text().trim();
-            movieLink = 'https://imzod.com/' + $(this).find("p > span > a").attr("href");
+            movieLink = 'https://imzod.com' + $(this).find("p > span > a").attr("href");
 
             moviesData.push({ movieName, movieLink });
         });
@@ -26,7 +37,11 @@ async function getUrLMovie() {
 
 
 async function getStreamLink() {
+
     try {
+
+        // console.log(moviesData.length);
+
         for (const movieData in moviesData) {
 
             const getStreamUrl = await axios.get(`${moviesData[movieData].movieLink}`);
@@ -41,6 +56,24 @@ async function getStreamLink() {
             moviesData[movieData].movieStream = movieStream;
 
         }
+
+        connection.query('SELECT MAX(id) FROM movies', (error, results, fields) => {
+            if (error) throw error;
+            console.log(results[0]['MAX(id)']);
+
+            if (results[0]['MAX(id)'] === moviesData.length) return
+
+            connection.query('TRUNCATE TABLE movies', (error, results, fields) => {
+                if (error) throw error;
+            });
+            moviesData.forEach((movie) => {
+                connection.query('INSERT INTO movies SET ?', movie, (error, results, fields) => {
+                    if (error) throw error;
+                    console.log(`Nouveau film inséré avec succès: ${movie.movieName}`);
+                });
+            });
+
+        });
 
     } catch (error) {
         console.log(error);
